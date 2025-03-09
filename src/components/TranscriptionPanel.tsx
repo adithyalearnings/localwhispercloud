@@ -1,9 +1,29 @@
-
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import GlassCard from "./GlassCard";
-import { Copy, CheckCircle, DownloadCloud, Clock, Settings, RefreshCw, ListFilter, ExternalLink } from "lucide-react";
+import { 
+  Copy, 
+  CheckCircle, 
+  DownloadCloud, 
+  Clock, 
+  Settings, 
+  RefreshCw, 
+  ListFilter, 
+  ExternalLink,
+  FileText,
+  FileDown,
+  Menu
+} from "lucide-react";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { exportToPDF, exportToGoogleDocs, exportToGoogleKeep, exportToNotion } from "@/utils/exportUtils";
 
 interface TranscriptionPanelProps {
   className?: string;
@@ -101,7 +121,7 @@ const TranscriptionPanel = ({ className }: TranscriptionPanelProps) => {
         case 'openai':
           return "After local processing through the Whisper model, this exemplary transcription demonstrates how spoken content would be rendered with appropriate punctuation and formatting.";
         case 'anthropic':
-          return "The Whisper model locally processes audio and generates this transcription, showcasing proper formatting and punctuation of the spoken content.";
+          return "The Whisper model locally processes audio and generates this transcription, showcasing proper formatting and punctuation of the spoken content from the uploaded audio file.";
         case 'perplexity':
           return "This transcription, created by processing audio through Whisper locally, shows how spoken content is rendered with formatting and punctuation.";
         case 'gemini':
@@ -146,14 +166,57 @@ const TranscriptionPanel = ({ className }: TranscriptionPanelProps) => {
     }
   };
   
+  // Timestamp for use in filenames
+  const getTimestampedFilename = () => {
+    const now = new Date();
+    return `transcript_${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
+  };
+  
   return (
     <GlassCard className={cn("w-full", className)}>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold">Transcription Result</h3>
         <div className="flex items-center space-x-2">
-          <button className="p-2 hover:bg-secondary rounded-lg transition-colors" title="Download as file">
-            <DownloadCloud size={18} className="text-foreground/60" />
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-2 hover:bg-secondary rounded-lg transition-colors" title="Export options">
+                <DownloadCloud size={18} className="text-foreground/60" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Export Options</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={() => exportToPDF(transcriptionText, getTimestampedFilename())}
+                className="cursor-pointer"
+              >
+                <FileDown className="mr-2 h-4 w-4" />
+                <span>Save as PDF</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => exportToGoogleDocs(transcriptionText)}
+                className="cursor-pointer"
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                <span>Export to Google Docs</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => exportToGoogleKeep(transcriptionText)}
+                className="cursor-pointer"
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                <span>Export to Google Keep</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => exportToNotion(transcriptionText)}
+                className="cursor-pointer"
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                <span>Export to Notion</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
           <button 
             className="p-2 hover:bg-secondary rounded-lg transition-colors relative"
             onClick={handleCopy}
