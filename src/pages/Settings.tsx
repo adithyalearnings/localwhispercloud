@@ -1,10 +1,20 @@
-
 import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import GlassCard from "@/components/GlassCard";
 import { fadeUp } from "@/lib/animations";
-import { Settings as SettingsIcon, Save, Trash, Cpu, HardDrive, Globe, FileAudio, Key, Bot } from "lucide-react";
+import { 
+  Settings as SettingsIcon, 
+  Save, 
+  Trash, 
+  Cpu, 
+  HardDrive, 
+  Globe, 
+  FileAudio, 
+  Key, 
+  Bot, 
+  Server
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -29,7 +39,16 @@ const Settings = () => {
   const [anthropicKey, setAnthropicKey] = useState("");
   const [perplexityKey, setPerplexityKey] = useState("");
   const [geminiKey, setGeminiKey] = useState("");
+  const [llamaKey, setLlamaKey] = useState("");
+  const [groqKey, setGroqKey] = useState("");
+  const [huggingfaceKey, setHuggingfaceKey] = useState("");
+  const [grokKey, setGrokKey] = useState("");
   const [showAPIKeys, setShowAPIKeys] = useState(false);
+  
+  // MCP server settings
+  const [useMCPServer, setUseMCPServer] = useState(false);
+  const [mcpServerUrl, setMcpServerUrl] = useState("http://localhost:8080");
+  const [mcpServerApiKey, setMcpServerApiKey] = useState("");
   
   // AI model selection
   const [selectedAIModel, setSelectedAIModel] = useState("openai");
@@ -51,6 +70,15 @@ const Settings = () => {
         anthropicKey: anthropicKey ? "****" : "",
         perplexityKey: perplexityKey ? "****" : "",
         geminiKey: geminiKey ? "****" : "",
+        llamaKey: llamaKey ? "****" : "",
+        groqKey: groqKey ? "****" : "",
+        huggingfaceKey: huggingfaceKey ? "****" : "",
+        grokKey: grokKey ? "****" : "",
+      },
+      mcpServer: {
+        enabled: useMCPServer,
+        url: mcpServerUrl,
+        apiKey: mcpServerApiKey ? "****" : "",
       }
     });
     
@@ -104,10 +132,71 @@ const Settings = () => {
                     <option value="anthropic">Anthropic Claude</option>
                     <option value="perplexity">Perplexity AI</option>
                     <option value="gemini">Google Gemini</option>
+                    <option value="llama">Meta Llama</option>
+                    <option value="groq">Groq</option>
+                    <option value="huggingface">Hugging Face</option>
+                    <option value="grok">Grok AI</option>
+                    <option value="mcp">MCP Server</option>
                   </select>
                   <p className="mt-1 text-xs text-foreground/60">
                     Select which AI service to use for text rephrasing and summarization features.
                   </p>
+                </div>
+                
+                {/* MCP Server Configuration */}
+                <div className={cn("mb-6", selectedAIModel === "mcp" ? "block" : "hidden")}>
+                  <div className="rounded-lg bg-secondary/30 p-4 mb-4">
+                    <h3 className="font-medium mb-2 flex items-center">
+                      <Server size={18} className="mr-2 text-primary" />
+                      MCP Server Configuration
+                    </h3>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm text-foreground/80 mb-1">MCP Server URL</label>
+                        <input
+                          type="text"
+                          value={mcpServerUrl}
+                          onChange={(e) => setMcpServerUrl(e.target.value)}
+                          className="w-full px-4 py-2 rounded-lg border border-border bg-background/50"
+                          placeholder="http://localhost:8080"
+                        />
+                      </div>
+                      
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="mcpAuthEnabled"
+                          checked={!!mcpServerApiKey}
+                          onChange={(e) => {
+                            if (!e.target.checked) setMcpServerApiKey("");
+                          }}
+                          className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                        />
+                        <label htmlFor="mcpAuthEnabled" className="ml-2 text-foreground/80 text-sm">
+                          Enable Authentication
+                        </label>
+                      </div>
+                      
+                      {mcpServerApiKey !== "" && (
+                        <div>
+                          <label className="block text-sm text-foreground/80 mb-1">API Key</label>
+                          <div className="flex">
+                            <input
+                              type={showAPIKeys ? "text" : "password"}
+                              value={mcpServerApiKey}
+                              onChange={(e) => setMcpServerApiKey(e.target.value)}
+                              className="flex-1 px-4 py-2 rounded-lg border border-border bg-background/50"
+                              placeholder="Enter API key for MCP server"
+                            />
+                            <div className="ml-2 flex items-center justify-center w-10 h-10 bg-secondary rounded-lg">
+                              <Key size={16} className="text-foreground/60" />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="mb-6">
@@ -185,6 +274,71 @@ const Settings = () => {
                         </div>
                       </div>
                     </div>
+                    
+                    {/* New API Keys */}
+                    <div className={cn(selectedAIModel === "llama" ? "opacity-100" : "opacity-60")}>
+                      <label className="block text-sm text-foreground/80 mb-1">Meta Llama API Key</label>
+                      <div className="flex">
+                        <input
+                          type={showAPIKeys ? "text" : "password"}
+                          value={llamaKey}
+                          onChange={(e) => setLlamaKey(e.target.value)}
+                          className="flex-1 px-4 py-2 rounded-lg border border-border bg-background/50"
+                          placeholder="llama-..."
+                        />
+                        <div className="ml-2 flex items-center justify-center w-10 h-10 bg-secondary rounded-lg">
+                          <Key size={16} className="text-foreground/60" />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className={cn(selectedAIModel === "groq" ? "opacity-100" : "opacity-60")}>
+                      <label className="block text-sm text-foreground/80 mb-1">Groq API Key</label>
+                      <div className="flex">
+                        <input
+                          type={showAPIKeys ? "text" : "password"}
+                          value={groqKey}
+                          onChange={(e) => setGroqKey(e.target.value)}
+                          className="flex-1 px-4 py-2 rounded-lg border border-border bg-background/50"
+                          placeholder="groq-..."
+                        />
+                        <div className="ml-2 flex items-center justify-center w-10 h-10 bg-secondary rounded-lg">
+                          <Key size={16} className="text-foreground/60" />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className={cn(selectedAIModel === "huggingface" ? "opacity-100" : "opacity-60")}>
+                      <label className="block text-sm text-foreground/80 mb-1">Hugging Face API Key</label>
+                      <div className="flex">
+                        <input
+                          type={showAPIKeys ? "text" : "password"}
+                          value={huggingfaceKey}
+                          onChange={(e) => setHuggingfaceKey(e.target.value)}
+                          className="flex-1 px-4 py-2 rounded-lg border border-border bg-background/50"
+                          placeholder="hf_..."
+                        />
+                        <div className="ml-2 flex items-center justify-center w-10 h-10 bg-secondary rounded-lg">
+                          <Key size={16} className="text-foreground/60" />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className={cn(selectedAIModel === "grok" ? "opacity-100" : "opacity-60")}>
+                      <label className="block text-sm text-foreground/80 mb-1">Grok API Key</label>
+                      <div className="flex">
+                        <input
+                          type={showAPIKeys ? "text" : "password"}
+                          value={grokKey}
+                          onChange={(e) => setGrokKey(e.target.value)}
+                          className="flex-1 px-4 py-2 rounded-lg border border-border bg-background/50"
+                          placeholder="grok-..."
+                        />
+                        <div className="ml-2 flex items-center justify-center w-10 h-10 bg-secondary rounded-lg">
+                          <Key size={16} className="text-foreground/60" />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                   
                   <p className="mt-3 text-xs text-foreground/60">
@@ -194,6 +348,7 @@ const Settings = () => {
               </GlassCard>
             </section>
             
+            {/* Transcription Settings Section */}
             <section className={fadeUp({ delay: 150 })}>
               <h2 className="text-2xl font-bold mb-6 flex items-center">
                 <Cpu size={24} className="mr-2 text-primary" />
@@ -264,6 +419,7 @@ const Settings = () => {
               </GlassCard>
             </section>
             
+            {/* Storage Settings Section */}
             <section className={fadeUp({ delay: 200 })}>
               <h2 className="text-2xl font-bold mb-6 flex items-center">
                 <HardDrive size={24} className="mr-2 text-primary" />
@@ -319,6 +475,7 @@ const Settings = () => {
               </GlassCard>
             </section>
             
+            {/* History Settings Section */}
             <section className={fadeUp({ delay: 250 })}>
               <h2 className="text-2xl font-bold mb-6 flex items-center">
                 <FileAudio size={24} className="mr-2 text-primary" />

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import GlassCard from "./GlassCard";
-import { Copy, CheckCircle, DownloadCloud, Clock, Settings, RefreshCw, ListFilter } from "lucide-react";
+import { Copy, CheckCircle, DownloadCloud, Clock, Settings, RefreshCw, ListFilter, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 interface TranscriptionPanelProps {
@@ -18,6 +18,9 @@ const TranscriptionPanel = ({ className }: TranscriptionPanelProps) => {
   const [transcriptionText, setTranscriptionText] = useState(
     "This is a sample transcription that would appear after processing an audio file through the Whisper model locally. The text would appear here with proper punctuation and formatting based on the spoken content from the uploaded audio file."
   );
+  
+  // In a real implementation, this would be fetched from settings or localStorage
+  const [aiProvider, setAiProvider] = useState("openai");
   
   const handleCopy = () => {
     navigator.clipboard.writeText(transcriptionText);
@@ -36,12 +39,11 @@ const TranscriptionPanel = ({ className }: TranscriptionPanelProps) => {
       // This would be replaced with actual API call in production
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Sample rephrased text
-      setTranscriptionText(
-        "After local processing through the Whisper model, this exemplary transcription demonstrates how spoken content would be rendered with appropriate punctuation and formatting."
-      );
+      // Sample rephrased text based on the selected AI provider
+      const rephrasedText = getAIModelResponse('rephrase', aiProvider);
+      setTranscriptionText(rephrasedText);
       
-      toast.success("Text rephrased successfully");
+      toast.success(`Text rephrased successfully using ${getAIProviderName(aiProvider)}`);
     } catch (error) {
       toast.error("Failed to rephrase text");
       console.error(error);
@@ -61,18 +63,86 @@ const TranscriptionPanel = ({ className }: TranscriptionPanelProps) => {
       // This would be replaced with actual API call in production
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Sample summarized text
-      setTranscriptionText(
-        "Sample transcription showing Whisper model local processing results with proper formatting."
-      );
+      // Sample summarized text based on the selected AI provider
+      const summarizedText = getAIModelResponse('summarize', aiProvider);
+      setTranscriptionText(summarizedText);
       
-      toast.success("Text summarized successfully");
+      toast.success(`Text summarized successfully using ${getAIProviderName(aiProvider)}`);
     } catch (error) {
       toast.error("Failed to summarize text");
       console.error(error);
     } finally {
       setIsProcessing(false);
       setProcessingType(null);
+    }
+  };
+  
+  // Helper function to get the provider name for display
+  const getAIProviderName = (provider: string): string => {
+    const providers: Record<string, string> = {
+      'openai': 'OpenAI',
+      'anthropic': 'Anthropic Claude',
+      'perplexity': 'Perplexity AI',
+      'gemini': 'Google Gemini',
+      'llama': 'Meta Llama',
+      'groq': 'Groq',
+      'huggingface': 'Hugging Face',
+      'grok': 'Grok AI',
+      'mcp': 'MCP Server'
+    };
+    
+    return providers[provider] || provider;
+  };
+  
+  // Helper function to simulate different AI model responses
+  const getAIModelResponse = (type: 'rephrase' | 'summarize', provider: string): string => {
+    if (type === 'rephrase') {
+      switch (provider) {
+        case 'openai':
+          return "After local processing through the Whisper model, this exemplary transcription demonstrates how spoken content would be rendered with appropriate punctuation and formatting.";
+        case 'anthropic':
+          return "The Whisper model locally processes audio and generates this transcription, showcasing proper formatting and punctuation of the spoken content.";
+        case 'perplexity':
+          return "This transcription, created by processing audio through Whisper locally, shows how spoken content is rendered with formatting and punctuation.";
+        case 'gemini':
+          return "Locally processed through Whisper, this transcription exemplifies the accurate rendering of spoken content with proper formatting.";
+        case 'llama':
+          return "This transcription was created by the Whisper model running locally, formatting spoken content with proper punctuation.";
+        case 'groq':
+          return "When processed locally through Whisper, audio content is transcribed like this example, with proper formatting applied.";
+        case 'huggingface':
+          return "This example shows how the Whisper model running locally can transcribe spoken content with appropriate formatting and punctuation.";
+        case 'grok':
+          return "Spoken audio processed through the local Whisper model produces this transcription with proper formatting and punctuation.";
+        case 'mcp':
+          return "The MCP server processed this transcription via Whisper, demonstrating how speech is rendered with punctuation and formatting.";
+        default:
+          return "The audio has been transcribed using local processing, showing how spoken content appears with formatting.";
+      }
+    } else {
+      // Summarize responses
+      switch (provider) {
+        case 'openai':
+          return "Sample transcription showing Whisper model local processing results with proper formatting.";
+        case 'anthropic':
+          return "Locally processed audio transcription with formatting applied by Whisper.";
+        case 'perplexity':
+          return "Whisper model locally transcribes audio with proper formatting.";
+        case 'gemini':
+          return "Audio processed locally through Whisper with appropriate text formatting.";
+        case 'llama':
+          return "Local Whisper processing creates properly formatted transcriptions.";
+        case 'groq':
+          return "Whisper locally formats and transcribes spoken content.";
+        case 'huggingface':
+          return "Local audio processing with Whisper produces formatted transcriptions.";
+        case 'grok':
+          return "Audio transcribed locally using Whisper with formatting.";
+        case 'mcp':
+          return "MCP server provides formatted transcription via Whisper.";
+        default:
+          return "Local audio processing generates formatted text.";
+      }
     }
   };
   
@@ -103,9 +173,15 @@ const TranscriptionPanel = ({ className }: TranscriptionPanelProps) => {
           <Clock size={14} />
           <span>Processing time: 12.3s</span>
         </div>
-        <div className="flex items-center space-x-2 text-foreground/60">
-          <Settings size={14} />
-          <span>Model: whisper-small.en</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2 text-foreground/60">
+            <Settings size={14} />
+            <span>Model: whisper-small.en</span>
+          </div>
+          <div className="flex items-center space-x-2 text-foreground/60">
+            <span>AI: {getAIProviderName(aiProvider)}</span>
+            <ExternalLink size={14} />
+          </div>
         </div>
       </div>
       
