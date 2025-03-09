@@ -4,8 +4,9 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import GlassCard from "@/components/GlassCard";
 import { fadeUp } from "@/lib/animations";
-import { Settings as SettingsIcon, Save, Trash, Cpu, HardDrive, Globe, FileAudio } from "lucide-react";
+import { Settings as SettingsIcon, Save, Trash, Cpu, HardDrive, Globe, FileAudio, Key, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const Settings = () => {
   useEffect(() => {
@@ -23,6 +24,16 @@ const Settings = () => {
   const [transcriptionHistory, setTranscriptionHistory] = useState(true);
   const [maxHistoryItems, setMaxHistoryItems] = useState(50);
   
+  // AI model API key states
+  const [openAIKey, setOpenAIKey] = useState("");
+  const [anthropicKey, setAnthropicKey] = useState("");
+  const [perplexityKey, setPerplexityKey] = useState("");
+  const [geminiKey, setGeminiKey] = useState("");
+  const [showAPIKeys, setShowAPIKeys] = useState(false);
+  
+  // AI model selection
+  const [selectedAIModel, setSelectedAIModel] = useState("openai");
+  
   const handleSaveSettings = () => {
     // In a real app, this would save settings to local storage or a config file
     console.log("Settings saved", {
@@ -33,11 +44,18 @@ const Settings = () => {
       saveFormat,
       autoSave,
       transcriptionHistory,
-      maxHistoryItems
+      maxHistoryItems,
+      aiModelSettings: {
+        selectedModel: selectedAIModel,
+        openAIKey: openAIKey ? "****" : "", // Don't log actual keys
+        anthropicKey: anthropicKey ? "****" : "",
+        perplexityKey: perplexityKey ? "****" : "",
+        geminiKey: geminiKey ? "****" : "",
+      }
     });
     
     // Show toast notification
-    // toast({ title: "Settings saved", description: "Your preferences have been updated." });
+    toast.success("Settings saved successfully");
   };
   
   const handleClearHistory = () => {
@@ -48,7 +66,7 @@ const Settings = () => {
     if (confirm("Are you sure you want to clear all transcription history? This cannot be undone.")) {
       // Clear history
       console.log("History cleared");
-      // toast({ title: "History cleared", description: "Your transcription history has been deleted." });
+      toast.success("Transcription history has been cleared");
     }
   };
   
@@ -67,6 +85,115 @@ const Settings = () => {
           </div>
           
           <div className="space-y-8">
+            {/* AI Model Settings Section */}
+            <section className={fadeUp({ delay: 100 })}>
+              <h2 className="text-2xl font-bold mb-6 flex items-center">
+                <Bot size={24} className="mr-2 text-primary" />
+                AI Model Settings
+              </h2>
+              
+              <GlassCard>
+                <div className="mb-6">
+                  <label className="block text-foreground font-medium mb-2">Select AI Service for Rephrasing and Summarizing</label>
+                  <select
+                    value={selectedAIModel}
+                    onChange={(e) => setSelectedAIModel(e.target.value)}
+                    className="w-full px-4 py-2 rounded-lg border border-border bg-background/50"
+                  >
+                    <option value="openai">OpenAI (GPT-4, GPT-3.5)</option>
+                    <option value="anthropic">Anthropic Claude</option>
+                    <option value="perplexity">Perplexity AI</option>
+                    <option value="gemini">Google Gemini</option>
+                  </select>
+                  <p className="mt-1 text-xs text-foreground/60">
+                    Select which AI service to use for text rephrasing and summarization features.
+                  </p>
+                </div>
+                
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-foreground font-medium">API Keys</label>
+                    <button 
+                      onClick={() => setShowAPIKeys(!showAPIKeys)} 
+                      className="text-xs text-primary hover:text-primary/80"
+                    >
+                      {showAPIKeys ? "Hide Keys" : "Show Keys"}
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className={cn(selectedAIModel === "openai" ? "opacity-100" : "opacity-60")}>
+                      <label className="block text-sm text-foreground/80 mb-1">OpenAI API Key</label>
+                      <div className="flex">
+                        <input
+                          type={showAPIKeys ? "text" : "password"}
+                          value={openAIKey}
+                          onChange={(e) => setOpenAIKey(e.target.value)}
+                          className="flex-1 px-4 py-2 rounded-lg border border-border bg-background/50"
+                          placeholder="sk-..."
+                        />
+                        <div className="ml-2 flex items-center justify-center w-10 h-10 bg-secondary rounded-lg">
+                          <Key size={16} className="text-foreground/60" />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className={cn(selectedAIModel === "anthropic" ? "opacity-100" : "opacity-60")}>
+                      <label className="block text-sm text-foreground/80 mb-1">Anthropic API Key</label>
+                      <div className="flex">
+                        <input
+                          type={showAPIKeys ? "text" : "password"}
+                          value={anthropicKey}
+                          onChange={(e) => setAnthropicKey(e.target.value)}
+                          className="flex-1 px-4 py-2 rounded-lg border border-border bg-background/50"
+                          placeholder="sk-ant-..."
+                        />
+                        <div className="ml-2 flex items-center justify-center w-10 h-10 bg-secondary rounded-lg">
+                          <Key size={16} className="text-foreground/60" />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className={cn(selectedAIModel === "perplexity" ? "opacity-100" : "opacity-60")}>
+                      <label className="block text-sm text-foreground/80 mb-1">Perplexity API Key</label>
+                      <div className="flex">
+                        <input
+                          type={showAPIKeys ? "text" : "password"}
+                          value={perplexityKey}
+                          onChange={(e) => setPerplexityKey(e.target.value)}
+                          className="flex-1 px-4 py-2 rounded-lg border border-border bg-background/50"
+                          placeholder="pplx-..."
+                        />
+                        <div className="ml-2 flex items-center justify-center w-10 h-10 bg-secondary rounded-lg">
+                          <Key size={16} className="text-foreground/60" />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className={cn(selectedAIModel === "gemini" ? "opacity-100" : "opacity-60")}>
+                      <label className="block text-sm text-foreground/80 mb-1">Google Gemini API Key</label>
+                      <div className="flex">
+                        <input
+                          type={showAPIKeys ? "text" : "password"}
+                          value={geminiKey}
+                          onChange={(e) => setGeminiKey(e.target.value)}
+                          className="flex-1 px-4 py-2 rounded-lg border border-border bg-background/50"
+                          placeholder="AI..."
+                        />
+                        <div className="ml-2 flex items-center justify-center w-10 h-10 bg-secondary rounded-lg">
+                          <Key size={16} className="text-foreground/60" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <p className="mt-3 text-xs text-foreground/60">
+                    Your API keys are stored locally and are never sent to our servers. They are used only to interact with the selected AI service.
+                  </p>
+                </div>
+              </GlassCard>
+            </section>
+            
             <section className={fadeUp({ delay: 150 })}>
               <h2 className="text-2xl font-bold mb-6 flex items-center">
                 <Cpu size={24} className="mr-2 text-primary" />

@@ -130,63 +130,67 @@ export const FileUploader = () => {
     <div className={fadeUp({ className: "w-full" })}>
       {!file ? (
         <div className="space-y-4">
-          <div
-            className={cn(
-              "border-2 border-dashed rounded-xl h-48 flex flex-col items-center justify-center cursor-pointer transition-all",
-              isDragging
-                ? "border-primary bg-primary/5"
-                : "border-border hover:border-primary/50 hover:bg-secondary/50"
-            )}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => document.getElementById('file-input')?.click()}
-          >
-            <Upload size={36} className="text-primary mb-4" />
-            <p className="text-lg font-medium mb-1">Upload audio file</p>
-            <p className="text-sm text-foreground/60">or drag and drop</p>
-            <input
-              id="file-input"
-              type="file"
-              className="hidden"
-              accept="audio/*"
-              onChange={handleFileInputChange}
-            />
-          </div>
-          
-          <div className="relative">
-            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 border-t border-border" />
-            <div className="relative flex justify-center">
-              <span className="bg-background px-2 text-sm text-muted-foreground">
-                or record audio
-              </span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* File Upload Side */}
+            <div
+              className={cn(
+                "border-2 border-dashed rounded-xl h-48 flex flex-col items-center justify-center cursor-pointer transition-all",
+                isDragging
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:border-primary/50 hover:bg-secondary/50"
+              )}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => document.getElementById('file-input')?.click()}
+            >
+              <Upload size={36} className="text-primary mb-4" />
+              <p className="text-lg font-medium mb-1">Upload audio file</p>
+              <p className="text-sm text-foreground/60">or drag and drop</p>
+              <input
+                id="file-input"
+                type="file"
+                className="hidden"
+                accept="audio/*"
+                onChange={handleFileInputChange}
+              />
             </div>
-          </div>
-          
-          <div className="flex justify-center">
-            {isRecording ? (
-              <div className="flex flex-col items-center">
-                <div className="flex items-center mb-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse mr-2" />
-                  <span className="text-sm font-medium">Recording {formatTime(recordingTime)}</span>
+            
+            {/* Microphone Recording Side */}
+            <div className={cn(
+              "border-2 border-dashed rounded-xl h-48 flex flex-col items-center justify-center transition-all",
+              isRecording
+                ? "border-red-500 bg-red-500/5"
+                : "border-border hover:border-primary/50 hover:bg-secondary/50"
+            )}>
+              {isRecording ? (
+                <div className="flex flex-col items-center justify-center">
+                  <div className="flex items-center mb-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse mr-2" />
+                    <span className="text-lg font-medium">Recording {formatTime(recordingTime)}</span>
+                  </div>
+                  <button
+                    onClick={stopRecording}
+                    className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-colors mt-4"
+                  >
+                    <StopCircle size={18} />
+                    Stop Recording
+                  </button>
                 </div>
-                <button
-                  onClick={stopRecording}
-                  className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-                >
-                  <StopCircle size={18} />
-                  Stop Recording
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={startRecording}
-                className="flex items-center gap-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground px-4 py-2 rounded-lg font-medium transition-colors"
-              >
-                <Mic size={18} />
-                Start Recording
-              </button>
-            )}
+              ) : (
+                <div className="flex flex-col items-center justify-center">
+                  <Mic size={36} className="text-primary mb-4" />
+                  <p className="text-lg font-medium mb-1">Record audio</p>
+                  <button
+                    onClick={startRecording}
+                    className="flex items-center gap-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground px-4 py-2 rounded-lg font-medium transition-colors mt-4"
+                  >
+                    <Mic size={18} />
+                    Start Recording
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       ) : (
