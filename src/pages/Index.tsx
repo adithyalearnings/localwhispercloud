@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import Features from "@/components/Features";
 import Footer from "@/components/Footer";
+import { Toaster } from "@/components/ui/sonner";
 
 const Index = () => {
   useEffect(() => {
@@ -19,6 +20,7 @@ const Index = () => {
         <Features />
       </main>
       <Footer />
+      <Toaster />
     </div>
   );
 };
