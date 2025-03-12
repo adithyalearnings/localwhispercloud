@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { saveGroqApiKey, getGroqApiKey } from "@/utils/groqTranscriptionApi";
 
 const Settings = () => {
   useEffect(() => {
@@ -51,7 +53,15 @@ const Settings = () => {
   const [mcpServerApiKey, setMcpServerApiKey] = useState("");
   
   // AI model selection
-  const [selectedAIModel, setSelectedAIModel] = useState("openai");
+  const [selectedAIModel, setSelectedAIModel] = useState("groq");
+  
+  // Load saved API keys from localStorage on component mount
+  useEffect(() => {
+    const savedGroqKey = getGroqApiKey();
+    if (savedGroqKey) {
+      setGroqKey(savedGroqKey);
+    }
+  }, []);
   
   const handleSaveSettings = () => {
     // In a real app, this would save settings to local storage or a config file
@@ -81,6 +91,11 @@ const Settings = () => {
         apiKey: mcpServerApiKey ? "****" : "",
       }
     });
+    
+    // Save Groq API key to localStorage
+    if (groqKey) {
+      saveGroqApiKey(groqKey);
+    }
     
     // Show toast notification
     toast.success("Settings saved successfully");

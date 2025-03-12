@@ -4,6 +4,14 @@ import { fadeUp } from "@/lib/animations";
 import { Upload, X, FileAudio, Loader2, Mic, StopCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { transcribeAudioWithGroq, isGroqConfigured } from "@/utils/groqTranscriptionApi";
+
+// Define event type for transcription results
+export type TranscriptionResultEvent = CustomEvent<{
+  text: string;
+  processingTime?: string;
+  model?: string;
+}>;
 
 export const FileUploader = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -201,17 +209,50 @@ export const FileUploader = () => {
   };
   
   const startTranscription = async () => {
-    if (!file) return;
+    if (!file) {
+      toast.error("No audio file selected");
+      return;
+    }
     
     setIsUploading(true);
     
-    // Simulate transcription in progress
-    setTimeout(() => {
+    try {
+      // Check if Groq API is configured
+      if (!isGroqConfigured()) {
+        toast.error("Groq API key is not set. Please add it in Settings.");
+        setIsUploading(false);
+        return;
+      }
+      
+      // Actually transcribe the audio using Groq
+      const result = await transcribeAudioWithGroq(file);
+      
+      // Create and dispatch custom event with transcription result
+      const transcriptionEvent = new CustomEvent<{
+        text: string;
+        processingTime?: string;
+        model?: string;
+      }>("transcriptionComplete", {
+        detail: {
+          text: result.text,
+          processingTime: result.processingTime?.toString(),
+          model: result.model
+        }
+      });
+      
+      document.dispatchEvent(transcriptionEvent);
+      
+      toast.success("Transcription completed");
+    } catch (error) {
+      console.error("Transcription error:", error);
+      if (error instanceof Error) {
+        toast.error(`Transcription failed: ${error.message}`);
+      } else {
+        toast.error("Transcription failed");
+      }
+    } finally {
       setIsUploading(false);
-      // Here you would typically start the actual transcription
-      console.log('Starting local transcription of file:', file.name);
-      toast.success('Transcription started');
-    }, 2000);
+    }
   };
   
   return (

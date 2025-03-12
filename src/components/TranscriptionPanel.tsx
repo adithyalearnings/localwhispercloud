@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import GlassCard from "./GlassCard";
 import { 
@@ -24,6 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { exportToPDF, exportToGoogleDocs, exportToGoogleKeep, exportToNotion } from "@/utils/exportUtils";
+import { TranscriptionResultEvent } from "./FileUploader";
 
 interface TranscriptionPanelProps {
   className?: string;
@@ -34,13 +36,37 @@ const TranscriptionPanel = ({ className }: TranscriptionPanelProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingType, setProcessingType] = useState<'rephrase' | 'summarize' | null>(null);
   
-  // Sample transcription result
-  const [transcriptionText, setTranscriptionText] = useState(
-    "This is a sample transcription that would appear after processing an audio file through the Whisper model locally. The text would appear here with proper punctuation and formatting based on the spoken content from the uploaded audio file."
+  // Transcription state
+  const [transcriptionText, setTranscriptionText] = useState<string>(
+    "Upload an audio file and click 'Start Transcription' to see the transcribed text here."
   );
+  const [processingTime, setProcessingTime] = useState<string>("0.0");
+  const [modelName, setModelName] = useState<string>("whisper");
+  
+  // Listen for transcription events
+  useEffect(() => {
+    const handleTranscriptionComplete = (event: Event) => {
+      const customEvent = event as TranscriptionResultEvent;
+      setTranscriptionText(customEvent.detail.text);
+      
+      if (customEvent.detail.processingTime) {
+        setProcessingTime(customEvent.detail.processingTime);
+      }
+      
+      if (customEvent.detail.model) {
+        setModelName(customEvent.detail.model);
+      }
+    };
+    
+    document.addEventListener("transcriptionComplete", handleTranscriptionComplete);
+    
+    return () => {
+      document.removeEventListener("transcriptionComplete", handleTranscriptionComplete);
+    };
+  }, []);
   
   // In a real implementation, this would be fetched from settings or localStorage
-  const [aiProvider, setAiProvider] = useState("openai");
+  const [aiProvider, setAiProvider] = useState("groq");
   
   const handleCopy = () => {
     navigator.clipboard.writeText(transcriptionText);
@@ -234,12 +260,12 @@ const TranscriptionPanel = ({ className }: TranscriptionPanelProps) => {
       <div className="mb-4 px-4 py-3 bg-secondary/40 rounded-lg text-sm">
         <div className="flex items-center space-x-2 text-foreground/60 mb-2">
           <Clock size={14} />
-          <span>Processing time: 12.3s</span>
+          <span>Processing time: {processingTime}s</span>
         </div>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 text-foreground/60">
             <Settings size={14} />
-            <span>Model: whisper-small.en</span>
+            <span>Model: {modelName}</span>
           </div>
           <div className="flex items-center space-x-2 text-foreground/60">
             <span>AI: {getAIProviderName(aiProvider)}</span>
