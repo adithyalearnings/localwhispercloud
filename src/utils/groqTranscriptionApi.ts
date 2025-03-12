@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for interacting with the Groq API for transcription
  */
@@ -54,14 +53,14 @@ export const transcribeAudioWithGroq = async (audioFile: File): Promise<Transcri
       },
       body: JSON.stringify({
         file: base64Audio,
-        model: "whisper-1", // Groq supports OpenAI compatible Whisper model
-        response_format: "text"
+        model: "whisper-1",
+        response_format: "json"
       })
     });
 
     // End timing
     const endTime = performance.now();
-    const processingTime = ((endTime - startTime) / 1000).toFixed(1);
+    const processingTime = Number(((endTime - startTime) / 1000).toFixed(1));
     
     if (!response.ok) {
       const errorData = await response.json();
