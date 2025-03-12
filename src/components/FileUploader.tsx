@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { fadeUp } from "@/lib/animations";
 import { Upload, X, FileAudio, Loader2, Mic, StopCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -11,10 +11,20 @@ export const FileUploader = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [hasRecordingPermission, setHasRecordingPermission] = useState<boolean | null>(null);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  
+  // Check if browser supports audio recording
+  useEffect(() => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      console.error('Browser does not support audio recording');
+      toast.error('Your browser does not support audio recording');
+    }
+  }, []);
   
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -55,23 +65,63 @@ export const FileUploader = () => {
     setFile(null);
   };
   
-  const startRecording = async () => {
+  const requestMicrophonePermission = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      // Clean up stream immediately after permission check
+      stream.getTracks().forEach(track => track.stop());
+      setHasRecordingPermission(true);
+      return true;
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      setHasRecordingPermission(false);
+      toast.error('Could not access microphone. Please check permissions.');
+      return false;
+    }
+  };
+  
+  const startRecording = async () => {
+    // If we haven't checked permission yet, do so now
+    if (hasRecordingPermission === null) {
+      const hasPermission = await requestMicrophonePermission();
+      if (!hasPermission) return;
+    } else if (hasRecordingPermission === false) {
+      toast.error('Microphone access denied. Please enable in browser settings.');
+      return;
+    }
+    
+    try {
+      // Get microphone stream
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
       
+      // Create media recorder with compatible mime type
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') 
+        ? 'audio/webm' 
+        : 'audio/mp4';
+      
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
       
+      // Set up data handling
       mediaRecorder.ondataavailable = (event) => {
+        console.log('Data available:', event.data.size);
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
       
+      // Handle recording completion
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const audioFile = new File([audioBlob], "recording.webm", { type: 'audio/webm' });
+        console.log('Recording stopped, chunks:', audioChunksRef.current.length);
+        if (audioChunksRef.current.length === 0) {
+          toast.error('No audio data captured. Please try again.');
+          return;
+        }
+        
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        const audioFile = new File([audioBlob], "recording.webm", { type: mimeType });
         setFile(audioFile);
         
         // Stop the timer
@@ -81,11 +131,17 @@ export const FileUploader = () => {
         }
         
         // Stop all audio tracks
-        stream.getTracks().forEach(track => track.stop());
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+          streamRef.current = null;
+        }
+        
+        toast.success('Recording saved successfully');
       };
       
-      // Start recording
-      mediaRecorder.start();
+      // Start recording with small timeslice to get data frequently
+      mediaRecorder.start(1000); // Get data every second
+      console.log('Recording started');
       setIsRecording(true);
       setRecordingTime(0);
       
@@ -95,17 +151,48 @@ export const FileUploader = () => {
       }, 1000);
       
     } catch (error) {
-      console.error('Error accessing microphone:', error);
-      toast.error('Could not access microphone. Please check permissions.');
+      console.error('Error starting recording:', error);
+      toast.error('Failed to start recording. Please check microphone permissions.');
     }
   };
   
   const stopRecording = () => {
+    console.log('Stopping recording, recorder state:', mediaRecorderRef.current?.state);
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+    } else {
+      // Handle case where recorder isn't active
+      console.error('Attempted to stop recording, but no active recorder found');
+      setIsRecording(false);
+      
+      // Clean up any existing stream
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+      
+      // Clear timer
+      if (timerRef.current) {
+        window.clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      
+      toast.error('Recording failed. Please try again.');
     }
   };
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        window.clearInterval(timerRef.current);
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
   
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -123,6 +210,7 @@ export const FileUploader = () => {
       setIsUploading(false);
       // Here you would typically start the actual transcription
       console.log('Starting local transcription of file:', file.name);
+      toast.success('Transcription started');
     }, 2000);
   };
   
@@ -157,12 +245,14 @@ export const FileUploader = () => {
             </div>
             
             {/* Microphone Recording Side */}
-            <div className={cn(
-              "border-2 border-dashed rounded-xl h-48 flex flex-col items-center justify-center transition-all",
-              isRecording
-                ? "border-red-500 bg-red-500/5"
-                : "border-border hover:border-primary/50 hover:bg-secondary/50"
-            )}>
+            <div 
+              className={cn(
+                "border-2 border-dashed rounded-xl h-48 flex flex-col items-center justify-center transition-all",
+                isRecording
+                  ? "border-red-500 bg-red-500/5"
+                  : "border-border hover:border-primary/50 hover:bg-secondary/50"
+              )}
+            >
               {isRecording ? (
                 <div className="flex flex-col items-center justify-center">
                   <div className="flex items-center mb-2">
@@ -172,6 +262,7 @@ export const FileUploader = () => {
                   <button
                     onClick={stopRecording}
                     className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-colors mt-4"
+                    type="button"
                   >
                     <StopCircle size={18} />
                     Stop Recording
@@ -184,6 +275,7 @@ export const FileUploader = () => {
                   <button
                     onClick={startRecording}
                     className="flex items-center gap-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground px-4 py-2 rounded-lg font-medium transition-colors mt-4"
+                    type="button"
                   >
                     <Mic size={18} />
                     Start Recording
@@ -207,6 +299,7 @@ export const FileUploader = () => {
                 clearFile();
               }}
               className="p-1 hover:bg-secondary rounded-full"
+              type="button"
             >
               <X size={18} className="text-foreground/60" />
             </button>
@@ -220,6 +313,7 @@ export const FileUploader = () => {
               isUploading ? "bg-primary/70" : "bg-primary hover:bg-primary/90",
               "text-primary-foreground transition-colors"
             )}
+            type="button"
           >
             {isUploading ? (
               <>
