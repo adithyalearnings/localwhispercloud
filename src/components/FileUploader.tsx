@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef, useEffect } from "react";
 import { fadeUp } from "@/lib/animations";
 import { Upload, X, FileAudio, Loader2, Mic, StopCircle } from "lucide-react";
@@ -6,7 +5,6 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { transcribeAudioWithGroq, isGroqConfigured } from "@/utils/groqTranscriptionApi";
 
-// Define event type for transcription results
 export type TranscriptionResultEvent = CustomEvent<{
   text: string;
   processingTime?: string;
@@ -20,13 +18,13 @@ export const FileUploader = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [hasRecordingPermission, setHasRecordingPermission] = useState<boolean | null>(null);
+  const [selectedModel, setSelectedModel] = useState('whisper-1');
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   
-  // Check if browser supports audio recording
   useEffect(() => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       console.error('Browser does not support audio recording');
@@ -54,7 +52,6 @@ export const FileUploader = () => {
   }, []);
   
   const handleFileSelect = (selectedFile: File) => {
-    // Check if file is an audio file
     if (!selectedFile.type.startsWith('audio/')) {
       toast.error('Please upload an audio file');
       return;
@@ -76,7 +73,6 @@ export const FileUploader = () => {
   const requestMicrophonePermission = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // Clean up stream immediately after permission check
       stream.getTracks().forEach(track => track.stop());
       setHasRecordingPermission(true);
       return true;
@@ -89,7 +85,6 @@ export const FileUploader = () => {
   };
   
   const startRecording = async () => {
-    // If we haven't checked permission yet, do so now
     if (hasRecordingPermission === null) {
       const hasPermission = await requestMicrophonePermission();
       if (!hasPermission) return;
@@ -99,11 +94,9 @@ export const FileUploader = () => {
     }
     
     try {
-      // Get microphone stream
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       
-      // Create media recorder with compatible mime type
       const mimeType = MediaRecorder.isTypeSupported('audio/webm') 
         ? 'audio/webm' 
         : 'audio/mp4';
@@ -112,7 +105,6 @@ export const FileUploader = () => {
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
       
-      // Set up data handling
       mediaRecorder.ondataavailable = (event) => {
         console.log('Data available:', event.data.size);
         if (event.data.size > 0) {
@@ -120,7 +112,6 @@ export const FileUploader = () => {
         }
       };
       
-      // Handle recording completion
       mediaRecorder.onstop = () => {
         console.log('Recording stopped, chunks:', audioChunksRef.current.length);
         if (audioChunksRef.current.length === 0) {
@@ -132,13 +123,11 @@ export const FileUploader = () => {
         const audioFile = new File([audioBlob], "recording.webm", { type: mimeType });
         setFile(audioFile);
         
-        // Stop the timer
         if (timerRef.current) {
           window.clearInterval(timerRef.current);
           timerRef.current = null;
         }
         
-        // Stop all audio tracks
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
           streamRef.current = null;
@@ -147,13 +136,11 @@ export const FileUploader = () => {
         toast.success('Recording saved successfully');
       };
       
-      // Start recording with small timeslice to get data frequently
-      mediaRecorder.start(1000); // Get data every second
+      mediaRecorder.start(1000);
       console.log('Recording started');
       setIsRecording(true);
       setRecordingTime(0);
       
-      // Start the timer
       timerRef.current = window.setInterval(() => {
         setRecordingTime((prevTime) => prevTime + 1);
       }, 1000);
@@ -170,17 +157,14 @@ export const FileUploader = () => {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
     } else {
-      // Handle case where recorder isn't active
       console.error('Attempted to stop recording, but no active recorder found');
       setIsRecording(false);
       
-      // Clean up any existing stream
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
       }
       
-      // Clear timer
       if (timerRef.current) {
         window.clearInterval(timerRef.current);
         timerRef.current = null;
@@ -190,7 +174,6 @@ export const FileUploader = () => {
     }
   };
   
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (timerRef.current) {
@@ -217,17 +200,14 @@ export const FileUploader = () => {
     setIsUploading(true);
     
     try {
-      // Check if Groq API is configured
       if (!isGroqConfigured()) {
         toast.error("Groq API key is not set. Please add it in Settings.");
         setIsUploading(false);
         return;
       }
       
-      // Actually transcribe the audio using Groq
-      const result = await transcribeAudioWithGroq(file);
+      const result = await transcribeAudioWithGroq(file, selectedModel);
       
-      // Create and dispatch custom event with transcription result
       const transcriptionEvent = new CustomEvent<{
         text: string;
         processingTime?: string;
@@ -255,12 +235,27 @@ export const FileUploader = () => {
     }
   };
   
+  const ModelSelector = () => (
+    <div className="mb-4">
+      <label className="block text-sm font-medium text-foreground mb-2">
+        Whisper Model
+      </label>
+      <select
+        value={selectedModel}
+        onChange={(e) => setSelectedModel(e.target.value)}
+        className="w-full px-4 py-2 rounded-lg border border-border bg-background/50"
+      >
+        <option value="whisper-1">Whisper (Default)</option>
+        <option value="whisper-large">Whisper Large</option>
+      </select>
+    </div>
+  );
+  
   return (
     <div className={fadeUp({ className: "w-full" })}>
       {!file ? (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* File Upload Side */}
             <div
               className={cn(
                 "border-2 border-dashed rounded-xl h-48 flex flex-col items-center justify-center cursor-pointer transition-all",
@@ -285,7 +280,6 @@ export const FileUploader = () => {
               />
             </div>
             
-            {/* Microphone Recording Side */}
             <div 
               className={cn(
                 "border-2 border-dashed rounded-xl h-48 flex flex-col items-center justify-center transition-all",
@@ -328,11 +322,15 @@ export const FileUploader = () => {
         </div>
       ) : (
         <div className="flex flex-col space-y-4">
+          <ModelSelector />
+          
           <div className="flex items-center p-4 bg-secondary/50 rounded-lg">
             <FileAudio size={24} className="text-primary mr-3" />
             <div className="flex-1 truncate">
               <p className="font-medium truncate">{file.name}</p>
-              <p className="text-sm text-foreground/60">{(file.size / (1024 * 1024)).toFixed(2)} MB</p>
+              <p className="text-sm text-foreground/60">
+                {(file.size / (1024 * 1024)).toFixed(2)} MB
+              </p>
             </div>
             <button 
               onClick={(e) => {

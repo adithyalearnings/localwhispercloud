@@ -29,9 +29,13 @@ export const saveGroqApiKey = (apiKey: string): void => {
 /**
  * Transcribe audio using Groq API
  * @param audioFile The audio file to transcribe
+ * @param model The whisper model to use (optional)
  * @returns Promise with transcription text
  */
-export const transcribeAudioWithGroq = async (audioFile: File): Promise<TranscriptionResponse> => {
+export const transcribeAudioWithGroq = async (
+  audioFile: File,
+  model: string = 'whisper-1'
+): Promise<TranscriptionResponse> => {
   const apiKey = getGroqApiKey();
   
   if (!apiKey) {
@@ -45,7 +49,7 @@ export const transcribeAudioWithGroq = async (audioFile: File): Promise<Transcri
     // First, convert the audio file to a form data object
     const formData = new FormData();
     formData.append('file', audioFile);
-    formData.append('model', 'whisper-1');
+    formData.append('model', model);
     formData.append('response_format', 'json');
     
     // Prepare the request to Groq API using FormData instead of base64
@@ -72,7 +76,7 @@ export const transcribeAudioWithGroq = async (audioFile: File): Promise<Transcri
     return {
       text: result.text,
       processingTime,
-      model: "groq-whisper"
+      model: model
     };
   } catch (error) {
     console.error("Transcription error:", error);
