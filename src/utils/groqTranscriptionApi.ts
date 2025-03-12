@@ -1,3 +1,4 @@
+
 /**
  * Utility functions for interacting with the Groq API for transcription
  */
@@ -41,21 +42,20 @@ export const transcribeAudioWithGroq = async (audioFile: File): Promise<Transcri
   const startTime = performance.now();
   
   try {
-    // First, convert the audio file to base64
-    const base64Audio = await fileToBase64(audioFile);
+    // First, convert the audio file to a form data object
+    const formData = new FormData();
+    formData.append('file', audioFile);
+    formData.append('model', 'whisper-1');
+    formData.append('response_format', 'json');
     
-    // Prepare the request to Groq API
+    // Prepare the request to Groq API using FormData instead of base64
     const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
+        'Authorization': `Bearer ${apiKey}`
+        // Don't set Content-Type with FormData, browser will set it automatically with boundary
       },
-      body: JSON.stringify({
-        file: base64Audio,
-        model: "whisper-1",
-        response_format: "json"
-      })
+      body: formData
     });
 
     // End timing
@@ -78,23 +78,6 @@ export const transcribeAudioWithGroq = async (audioFile: File): Promise<Transcri
     console.error("Transcription error:", error);
     throw error;
   }
-};
-
-/**
- * Convert a file to base64 string
- */
-const fileToBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => {
-      const base64String = reader.result as string;
-      // Remove the data URL prefix (e.g., "data:audio/wav;base64,")
-      const base64Content = base64String.split(',')[1];
-      resolve(base64Content);
-    };
-    reader.onerror = error => reject(error);
-  });
 };
 
 /**
