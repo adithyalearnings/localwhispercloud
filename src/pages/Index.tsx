@@ -32,7 +32,7 @@ const Index = () => {
               </p>
             </div>
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="flex flex-col space-y-8">
               <div className={fadeUp({ delay: 100 })}>
                 <GlassCard>
                   <h3 className="text-xl font-semibold mb-4">Input Audio</h3>

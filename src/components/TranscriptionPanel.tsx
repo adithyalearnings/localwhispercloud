@@ -24,8 +24,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { exportToPDF, exportToGoogleDocs, exportToGoogleKeep, exportToNotion } from "@/utils/exportUtils";
 import { TranscriptionResultEvent } from "./FileUploader";
+import { 
+  processTextWithGroq, 
+  getAvailableTextModels, 
+  isGroqConfigured 
+} from "@/utils/groqTranscriptionApi";
 
 interface TranscriptionPanelProps {
   className?: string;
@@ -35,6 +47,7 @@ const TranscriptionPanel = ({ className }: TranscriptionPanelProps) => {
   const [copied, setCopied] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingType, setProcessingType] = useState<'rephrase' | 'summarize' | null>(null);
+  const [selectedTextModel, setSelectedTextModel] = useState('llama-3.1-8b-instant');
   
   // Transcription state
   const [transcriptionText, setTranscriptionText] = useState<string>(
@@ -42,6 +55,8 @@ const TranscriptionPanel = ({ className }: TranscriptionPanelProps) => {
   );
   const [processingTime, setProcessingTime] = useState<string>("0.0");
   const [modelName, setModelName] = useState<string>("whisper");
+  
+  const availableTextModels = getAvailableTextModels();
   
   // Listen for transcription events
   useEffect(() => {
@@ -65,9 +80,6 @@ const TranscriptionPanel = ({ className }: TranscriptionPanelProps) => {
     };
   }, []);
   
-  // In a real implementation, this would be fetched from settings or localStorage
-  const [aiProvider, setAiProvider] = useState("groq");
-  
   const handleCopy = () => {
     navigator.clipboard.writeText(transcriptionText);
     setCopied(true);
@@ -78,20 +90,37 @@ const TranscriptionPanel = ({ className }: TranscriptionPanelProps) => {
   const handleRephrase = async () => {
     if (isProcessing) return;
     
+    if (!isGroqConfigured()) {
+      toast.error("Groq API key is not set. Please add it in Settings.");
+      return;
+    }
+    
+    if (transcriptionText === "Upload an audio file and click 'Start Transcription' to see the transcribed text here.") {
+      toast.error("Please transcribe some text first");
+      return;
+    }
+    
     setIsProcessing(true);
     setProcessingType('rephrase');
     
     try {
-      // This would be replaced with actual API call in production
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const result = await processTextWithGroq(
+        transcriptionText, 
+        'rephrase', 
+        selectedTextModel
+      );
       
-      // Sample rephrased text based on the selected AI provider
-      const rephrasedText = getAIModelResponse('rephrase', aiProvider);
-      setTranscriptionText(rephrasedText);
+      setTranscriptionText(result.text);
+      setProcessingTime(result.processingTime?.toString() || "0.0");
+      setModelName(result.model || selectedTextModel);
       
-      toast.success(`Text rephrased successfully using ${getAIProviderName(aiProvider)}`);
+      toast.success(`Text rephrased successfully`);
     } catch (error) {
-      toast.error("Failed to rephrase text");
+      if (error instanceof Error) {
+        toast.error(`Failed to rephrase text: ${error.message}`);
+      } else {
+        toast.error("Failed to rephrase text");
+      }
       console.error(error);
     } finally {
       setIsProcessing(false);
@@ -102,93 +131,41 @@ const TranscriptionPanel = ({ className }: TranscriptionPanelProps) => {
   const handleSummarize = async () => {
     if (isProcessing) return;
     
+    if (!isGroqConfigured()) {
+      toast.error("Groq API key is not set. Please add it in Settings.");
+      return;
+    }
+    
+    if (transcriptionText === "Upload an audio file and click 'Start Transcription' to see the transcribed text here.") {
+      toast.error("Please transcribe some text first");
+      return;
+    }
+    
     setIsProcessing(true);
     setProcessingType('summarize');
     
     try {
-      // This would be replaced with actual API call in production
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const result = await processTextWithGroq(
+        transcriptionText, 
+        'summarize', 
+        selectedTextModel
+      );
       
-      // Sample summarized text based on the selected AI provider
-      const summarizedText = getAIModelResponse('summarize', aiProvider);
-      setTranscriptionText(summarizedText);
+      setTranscriptionText(result.text);
+      setProcessingTime(result.processingTime?.toString() || "0.0");
+      setModelName(result.model || selectedTextModel);
       
-      toast.success(`Text summarized successfully using ${getAIProviderName(aiProvider)}`);
+      toast.success(`Text summarized successfully`);
     } catch (error) {
-      toast.error("Failed to summarize text");
+      if (error instanceof Error) {
+        toast.error(`Failed to summarize text: ${error.message}`);
+      } else {
+        toast.error("Failed to summarize text");
+      }
       console.error(error);
     } finally {
       setIsProcessing(false);
       setProcessingType(null);
-    }
-  };
-  
-  // Helper function to get the provider name for display
-  const getAIProviderName = (provider: string): string => {
-    const providers: Record<string, string> = {
-      'openai': 'OpenAI',
-      'anthropic': 'Anthropic Claude',
-      'perplexity': 'Perplexity AI',
-      'gemini': 'Google Gemini',
-      'llama': 'Meta Llama',
-      'groq': 'Groq',
-      'huggingface': 'Hugging Face',
-      'grok': 'Grok AI',
-      'mcp': 'MCP Server'
-    };
-    
-    return providers[provider] || provider;
-  };
-  
-  // Helper function to simulate different AI model responses
-  const getAIModelResponse = (type: 'rephrase' | 'summarize', provider: string): string => {
-    if (type === 'rephrase') {
-      switch (provider) {
-        case 'openai':
-          return "After local processing through the Whisper model, this exemplary transcription demonstrates how spoken content would be rendered with appropriate punctuation and formatting.";
-        case 'anthropic':
-          return "The Whisper model locally processes audio and generates this transcription, showcasing proper formatting and punctuation of the spoken content from the uploaded audio file.";
-        case 'perplexity':
-          return "This transcription, created by processing audio through Whisper locally, shows how spoken content is rendered with formatting and punctuation.";
-        case 'gemini':
-          return "Locally processed through Whisper, this transcription exemplifies the accurate rendering of spoken content with proper formatting.";
-        case 'llama':
-          return "This transcription was created by the Whisper model running locally, formatting spoken content with proper punctuation.";
-        case 'groq':
-          return "When processed locally through Whisper, audio content is transcribed like this example, with proper formatting applied.";
-        case 'huggingface':
-          return "This example shows how the Whisper model running locally can transcribe spoken content with appropriate formatting and punctuation.";
-        case 'grok':
-          return "Spoken audio processed through the local Whisper model produces this transcription with proper formatting and punctuation.";
-        case 'mcp':
-          return "The MCP server processed this transcription via Whisper, demonstrating how speech is rendered with punctuation and formatting.";
-        default:
-          return "The audio has been transcribed using local processing, showing how spoken content appears with formatting.";
-      }
-    } else {
-      // Summarize responses
-      switch (provider) {
-        case 'openai':
-          return "Sample transcription showing Whisper model local processing results with proper formatting.";
-        case 'anthropic':
-          return "Locally processed audio transcription with formatting applied by Whisper.";
-        case 'perplexity':
-          return "Whisper model locally transcribes audio with proper formatting.";
-        case 'gemini':
-          return "Audio processed locally through Whisper with appropriate text formatting.";
-        case 'llama':
-          return "Local Whisper processing creates properly formatted transcriptions.";
-        case 'groq':
-          return "Whisper locally formats and transcribes spoken content.";
-        case 'huggingface':
-          return "Local audio processing with Whisper produces formatted transcriptions.";
-        case 'grok':
-          return "Audio transcribed locally using Whisper with formatting.";
-        case 'mcp':
-          return "MCP server provides formatted transcription via Whisper.";
-        default:
-          return "Local audio processing generates formatted text.";
-      }
     }
   };
   
@@ -267,10 +244,6 @@ const TranscriptionPanel = ({ className }: TranscriptionPanelProps) => {
             <Settings size={14} />
             <span>Model: {modelName}</span>
           </div>
-          <div className="flex items-center space-x-2 text-foreground/60">
-            <span>AI: {getAIProviderName(aiProvider)}</span>
-            <ExternalLink size={14} />
-          </div>
         </div>
       </div>
       
@@ -278,42 +251,65 @@ const TranscriptionPanel = ({ className }: TranscriptionPanelProps) => {
         <p className="text-foreground/80 whitespace-pre-line">{transcriptionText}</p>
       </div>
       
-      <div className="flex flex-wrap gap-2">
-        <button 
-          onClick={handleRephrase}
-          disabled={isProcessing}
-          className={cn(
-            "flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors",
-            isProcessing && processingType === 'rephrase' 
-              ? "bg-primary/70 text-primary-foreground" 
-              : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-          )}
-        >
-          {isProcessing && processingType === 'rephrase' ? (
-            <RefreshCw size={16} className="animate-spin" />
-          ) : (
-            <RefreshCw size={16} />
-          )}
-          Rephrase
-        </button>
+      <div className="flex flex-col space-y-4">
+        <div className="w-full">
+          <label className="block text-sm font-medium text-foreground mb-2">
+            Text Processing Model
+          </label>
+          <Select
+            value={selectedTextModel}
+            onValueChange={setSelectedTextModel}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select model" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableTextModels.map(model => (
+                <SelectItem key={model.id} value={model.id}>
+                  {model.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         
-        <button 
-          onClick={handleSummarize}
-          disabled={isProcessing}
-          className={cn(
-            "flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors",
-            isProcessing && processingType === 'summarize' 
-              ? "bg-primary/70 text-primary-foreground" 
-              : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-          )}
-        >
-          {isProcessing && processingType === 'summarize' ? (
-            <ListFilter size={16} className="animate-spin" />
-          ) : (
-            <ListFilter size={16} />
-          )}
-          Summarize
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button 
+            onClick={handleRephrase}
+            disabled={isProcessing}
+            className={cn(
+              "flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors",
+              isProcessing && processingType === 'rephrase' 
+                ? "bg-primary/70 text-primary-foreground" 
+                : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
+            )}
+          >
+            {isProcessing && processingType === 'rephrase' ? (
+              <RefreshCw size={16} className="animate-spin" />
+            ) : (
+              <RefreshCw size={16} />
+            )}
+            Rephrase
+          </button>
+          
+          <button 
+            onClick={handleSummarize}
+            disabled={isProcessing}
+            className={cn(
+              "flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors",
+              isProcessing && processingType === 'summarize' 
+                ? "bg-primary/70 text-primary-foreground" 
+                : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
+            )}
+          >
+            {isProcessing && processingType === 'summarize' ? (
+              <ListFilter size={16} className="animate-spin" />
+            ) : (
+              <ListFilter size={16} />
+            )}
+            Summarize
+          </button>
+        </div>
       </div>
     </GlassCard>
   );
