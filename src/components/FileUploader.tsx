@@ -19,6 +19,7 @@ export const FileUploader = () => {
   const [recordingTime, setRecordingTime] = useState(0);
   const [hasRecordingPermission, setHasRecordingPermission] = useState<boolean | null>(null);
   const [selectedModel, setSelectedModel] = useState('whisper-1');
+  const [autoTranscribe, setAutoTranscribe] = useState(true);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -31,6 +32,12 @@ export const FileUploader = () => {
       toast.error('Your browser does not support audio recording');
     }
   }, []);
+
+  useEffect(() => {
+    if (file && autoTranscribe && !isRecording && !isUploading) {
+      startTranscription();
+    }
+  }, [file, isRecording]);
   
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -120,7 +127,8 @@ export const FileUploader = () => {
         }
         
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-        const audioFile = new File([audioBlob], "recording.webm", { type: mimeType });
+        const fileName = `recording_${new Date().getTime()}.${mimeType.includes('webm') ? 'webm' : 'mp4'}`;
+        const audioFile = new File([audioBlob], fileName, { type: mimeType });
         setFile(audioFile);
         
         if (timerRef.current) {
@@ -248,6 +256,18 @@ export const FileUploader = () => {
         <option value="whisper-1">Whisper (Default)</option>
         <option value="whisper-large">Whisper Large</option>
       </select>
+      <div className="flex items-center mt-2">
+        <input
+          type="checkbox"
+          id="auto-transcribe"
+          checked={autoTranscribe}
+          onChange={(e) => setAutoTranscribe(e.target.checked)}
+          className="mr-2 h-4 w-4"
+        />
+        <label htmlFor="auto-transcribe" className="text-sm text-foreground/80">
+          Auto-transcribe after recording
+        </label>
+      </div>
     </div>
   );
   
