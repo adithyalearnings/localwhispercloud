@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef, useEffect } from "react";
 import { fadeUp } from "@/lib/animations";
 import { Upload, X, FileAudio, Loader2, Mic, StopCircle } from "lucide-react";
@@ -31,7 +30,6 @@ export const FileUploader = () => {
   const timerRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   
-  // Get available models
   const availableModels = getAvailableTranscriptionModels();
   
   useEffect(() => {
@@ -222,6 +220,7 @@ export const FileUploader = () => {
         return;
       }
       
+      console.log(`Starting transcription with model: ${selectedModel}`);
       const result = await transcribeAudioWithGroq(file, selectedModel);
       
       const transcriptionEvent = new CustomEvent<{

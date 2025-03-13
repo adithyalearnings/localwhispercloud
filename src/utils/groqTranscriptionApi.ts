@@ -66,7 +66,7 @@ export const transcribeAudioWithGroq = async (
     // Debug log to help troubleshoot issues
     console.log(`Sending transcription request with model: ${model} and file: ${audioFile.name} (${audioFile.size} bytes)`);
     
-    // Prepare the request to Groq API using FormData
+    // Prepare the request to Groq API
     const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
@@ -82,6 +82,7 @@ export const transcribeAudioWithGroq = async (
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: { message: response.statusText } }));
+      console.error("API Error Response:", errorData);
       throw new Error(`Groq API Error: ${errorData.error?.message || response.statusText}`);
     }
     
