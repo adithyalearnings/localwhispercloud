@@ -27,14 +27,25 @@ export const saveGroqApiKey = (apiKey: string): void => {
 };
 
 /**
+ * Get available transcription models
+ * Returns an array of models that can be used for transcription
+ */
+export const getAvailableTranscriptionModels = () => {
+  return [
+    { id: 'whisper-large-v3', name: 'Whisper Large v3' },
+    { id: 'whisper-medium', name: 'Whisper Medium' },
+  ];
+};
+
+/**
  * Transcribe audio using Groq API
  * @param audioFile The audio file to transcribe
- * @param model The whisper model to use (optional)
+ * @param model The whisper model to use (defaults to whisper-large-v3)
  * @returns Promise with transcription text
  */
 export const transcribeAudioWithGroq = async (
   audioFile: File,
-  model: string = 'whisper-1'
+  model: string = 'whisper-large-v3'
 ): Promise<TranscriptionResponse> => {
   const apiKey = getGroqApiKey();
   
@@ -55,7 +66,7 @@ export const transcribeAudioWithGroq = async (
     // Debug log to help troubleshoot issues
     console.log(`Sending transcription request with model: ${model} and file: ${audioFile.name} (${audioFile.size} bytes)`);
     
-    // Prepare the request to Groq API using FormData instead of base64
+    // Prepare the request to Groq API using FormData
     const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
       method: 'POST',
       headers: {

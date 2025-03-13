@@ -1,9 +1,14 @@
+
 import { useState, useCallback, useRef, useEffect } from "react";
 import { fadeUp } from "@/lib/animations";
 import { Upload, X, FileAudio, Loader2, Mic, StopCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { transcribeAudioWithGroq, isGroqConfigured } from "@/utils/groqTranscriptionApi";
+import { 
+  transcribeAudioWithGroq, 
+  isGroqConfigured, 
+  getAvailableTranscriptionModels 
+} from "@/utils/groqTranscriptionApi";
 
 export type TranscriptionResultEvent = CustomEvent<{
   text: string;
@@ -18,13 +23,16 @@ export const FileUploader = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [hasRecordingPermission, setHasRecordingPermission] = useState<boolean | null>(null);
-  const [selectedModel, setSelectedModel] = useState('whisper-1');
+  const [selectedModel, setSelectedModel] = useState('whisper-large-v3');
   const [autoTranscribe, setAutoTranscribe] = useState(true);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  
+  // Get available models
+  const availableModels = getAvailableTranscriptionModels();
   
   useEffect(() => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -253,8 +261,9 @@ export const FileUploader = () => {
         onChange={(e) => setSelectedModel(e.target.value)}
         className="w-full px-4 py-2 rounded-lg border border-border bg-background/50"
       >
-        <option value="whisper-1">Whisper (Default)</option>
-        <option value="whisper-large">Whisper Large</option>
+        {availableModels.map(model => (
+          <option key={model.id} value={model.id}>{model.name}</option>
+        ))}
       </select>
       <div className="flex items-center mt-2">
         <input
